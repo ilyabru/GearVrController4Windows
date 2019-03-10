@@ -34,14 +34,14 @@ namespace GearVrController4Windows
 
         private DeviceInformation deviceInformation;
 
+        private byte[] eventData = new byte[60];
         private bool touchpadButton;
 
         public GearVrController() { }
 
         public GearVrController(DeviceInformation deviceInformation)
         {
-            this.deviceInformation = deviceInformation;
-            Initialize();
+            Create(deviceInformation);
         }
 
         public bool TouchpadButton
@@ -50,7 +50,13 @@ namespace GearVrController4Windows
             set => SetPropertyValue(ref touchpadButton, value);
         }
 
-        private async void Initialize()
+        public async void Create(DeviceInformation deviceInformation)
+        {
+            this.deviceInformation = deviceInformation;
+            await Initialize();
+        }
+
+        private async Task Initialize()
         {
             var device = await BluetoothLEDevice.FromIdAsync(deviceInformation.Id);
 
@@ -108,17 +114,17 @@ namespace GearVrController4Windows
 
         private async void Characteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
-            var eventData = new byte[args.CharacteristicValue.Length];
+            if (eventData.Length != args.CharacteristicValue.Length)
+                eventData = new byte[args.CharacteristicValue.Length];
+
             DataReader.FromBuffer(args.CharacteristicValue).ReadBytes(eventData);
 
             // We must update the collection on the UI thread because the collection is databound to a UI element.
-            if (TouchpadButton != ((eventData[58] & (1 << 3)) != 0))
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
             {
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                {
-                    TouchpadButton = (eventData[58] & (1 << 3)) != 0;
-                });
-            }
+                TouchpadButton = (eventData[58] & (1 << 3)) != 0;
+            });
+
         }
 
         private async void RunCommand(short commandValue)
