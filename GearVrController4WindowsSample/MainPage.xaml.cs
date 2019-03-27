@@ -58,7 +58,8 @@ namespace GearVrController4WindowsSample
             DeviceInformation di = await devicePicker.PickSingleDeviceAsync(rect);
             if (null != di)
             {
-                ViewModel.GearVrController = new GearVrController(di);
+                ViewModel.GearVrController = new GearVrController();
+                await ViewModel.GearVrController.Create(di);
             }
         }
     }

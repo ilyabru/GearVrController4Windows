@@ -28,7 +28,11 @@ namespace GearVrController4Windows
         private const short CMD_LPM_DISABLE = 0x0700;
         private const short CMD_VR_MODE = 0x0800;
 
+        private BluetoothLEDevice device = null;
+
+        private IReadOnlyList<GattDeviceService> services;
         private GattDeviceService customService = null;
+        private IReadOnlyList<GattCharacteristic> characteristics;
         private GattCharacteristic notifyCharacteristic = null;
         private GattCharacteristic writeCharacteristic = null;
 
@@ -36,13 +40,9 @@ namespace GearVrController4Windows
 
         private byte[] eventData = new byte[60];
         private bool touchpadButton;
+        private bool backButton;
 
         public GearVrController() { }
-
-        public GearVrController(DeviceInformation deviceInformation)
-        {
-            Create(deviceInformation);
-        }
 
         public bool TouchpadButton
         {
@@ -50,7 +50,13 @@ namespace GearVrController4Windows
             set => SetPropertyValue(ref touchpadButton, value);
         }
 
-        public async void Create(DeviceInformation deviceInformation)
+        public bool BackButton
+        {
+            get => backButton;
+            set => SetPropertyValue(ref backButton, value);
+        }
+
+        public async Task Create(DeviceInformation deviceInformation)
         {
             this.deviceInformation = deviceInformation;
             await Initialize();
@@ -58,13 +64,14 @@ namespace GearVrController4Windows
 
         private async Task Initialize()
         {
-            var device = await BluetoothLEDevice.FromIdAsync(deviceInformation.Id);
+            device = await BluetoothLEDevice.FromIdAsync(deviceInformation.Id);
 
             var servicesResult = await device.GetGattServicesAsync();
 
             if (servicesResult.Status == GattCommunicationStatus.Success)
             {
-                foreach (var service in servicesResult.Services)
+                services = servicesResult.Services;
+                foreach (var service in services)
                 {
                     if (service.Uuid == new Guid(UUID_CUSTOM_SERVICE))
                     {
@@ -79,7 +86,8 @@ namespace GearVrController4Windows
 
                 if (characteristicsResult.Status == GattCommunicationStatus.Success)
                 {
-                    foreach (var characteristic in characteristicsResult.Characteristics)
+                    characteristics = characteristicsResult.Characteristics;
+                    foreach (var characteristic in characteristics)
                     {
                         if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify) &&
                             characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_NOTIFY))
@@ -103,12 +111,25 @@ namespace GearVrController4Windows
                 if (status == GattCommunicationStatus.Success)
                 {
                     notifyCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                    device.ConnectionStatusChanged += Device_ConnectionStatusChanged; // 
                     RunCommand(CMD_SENSOR);
                 }
                 else
                 {
                     // Log error
                 }
+            }
+        }
+
+        private async void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
+        {
+            if (sender.ConnectionStatus == BluetoothConnectionStatus.Connected)
+            {
+                await Initialize();
+            }
+            else if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+            {
+                notifyCharacteristic.ValueChanged -= Characteristic_ValueChanged;
             }
         }
 
@@ -123,8 +144,8 @@ namespace GearVrController4Windows
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
             {
                 TouchpadButton = (eventData[58] & (1 << 3)) != 0;
+                BackButton = (eventData[58] & (1 << 2)) != 0;
             });
-
         }
 
         private async void RunCommand(short commandValue)
