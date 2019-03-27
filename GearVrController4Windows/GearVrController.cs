@@ -110,9 +110,10 @@ namespace GearVrController4Windows
 
                 if (status == GattCommunicationStatus.Success)
                 {
+                    device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+                    RunCommand(CMD_VR_MODE); // enables high frequency mode
+                    RunCommand(CMD_SENSOR); // enables sending of input data
                     notifyCharacteristic.ValueChanged += Characteristic_ValueChanged;
-                    device.ConnectionStatusChanged += Device_ConnectionStatusChanged; // 
-                    RunCommand(CMD_SENSOR);
                 }
                 else
                 {
@@ -121,6 +122,7 @@ namespace GearVrController4Windows
             }
         }
 
+        // This handler will be called when the controller re-connects
         private async void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
         {
             if (sender.ConnectionStatus == BluetoothConnectionStatus.Connected)
@@ -135,17 +137,17 @@ namespace GearVrController4Windows
 
         private async void Characteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
-            if (eventData.Length != args.CharacteristicValue.Length)
-                eventData = new byte[args.CharacteristicValue.Length];
-
-            DataReader.FromBuffer(args.CharacteristicValue).ReadBytes(eventData);
-
-            // We must update the collection on the UI thread because the collection is databound to a UI element.
-            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+            if (eventData.Length == args.CharacteristicValue.Length)
             {
-                TouchpadButton = (eventData[58] & (1 << 3)) != 0;
-                BackButton = (eventData[58] & (1 << 2)) != 0;
-            });
+                DataReader.FromBuffer(args.CharacteristicValue).ReadBytes(eventData);
+
+                // We must update the collection on the UI thread because the collection is databound to a UI element.
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
+                {
+                    TouchpadButton = (eventData[58] & (1 << 3)) != 0;
+                    BackButton = (eventData[58] & (1 << 2)) != 0;
+                });
+            }
         }
 
         private async void RunCommand(short commandValue)
