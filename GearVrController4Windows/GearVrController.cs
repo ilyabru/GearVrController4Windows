@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,7 +29,16 @@ namespace GearVrController4Windows
         private const short CMD_LPM_DISABLE = 0x0700;
         private const short CMD_VR_MODE = 0x0800;
 
-        private BluetoothLEDevice device = null;
+        private bool subscribedForNotifications = false;
+
+        #region Error Codes
+        readonly int E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED = unchecked((int)0x80650003);
+        readonly int E_BLUETOOTH_ATT_INVALID_PDU = unchecked((int)0x80650004);
+        readonly int E_ACCESSDENIED = unchecked((int)0x80070005);
+        readonly int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df); // HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_AVAILABLE)
+        #endregion
+
+        public BluetoothLEDevice device = null;
 
         private IReadOnlyList<GattDeviceService> services;
         private GattDeviceService customService = null;
@@ -59,67 +69,217 @@ namespace GearVrController4Windows
         public async Task Create(DeviceInformation deviceInformation)
         {
             this.deviceInformation = deviceInformation;
+
             await Initialize();
+        }
+
+        public async Task<bool> ClearBluetoothLEDeviceAsync()
+        {
+            if (subscribedForNotifications)
+            {
+                // Need to clear the CCCD from the remote device so we stop receiving notifications
+                var result = await notifyCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.None);
+                if (result != GattCommunicationStatus.Success)
+                {
+                    return false;
+                }
+                else
+                {
+                    //notifyCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                    //subscribedForNotifications = false;
+                    RemoveValueChangedHandler();
+                }
+            }
+            if (device != null)
+            {
+                device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
+                device?.Dispose();
+            }
+
+            device = null;
+            return true;
+        }
+
+        private async Task GetCustomService()
+        {
+            if (!await ClearBluetoothLEDeviceAsync())
+            {
+                Debug.WriteLine("Error: Unable to reset state, try again.");
+                return;
+            }
+
+            try
+            {
+                // BT_Code: BluetoothLEDevice.FromIdAsync must be called from a UI thread because it may prompt for consent.
+                device = await BluetoothLEDevice.FromIdAsync(deviceInformation.Id);
+
+                if (device == null)
+                {
+                    Debug.WriteLine("Failed to connect to device.");
+                }
+            }
+            catch (Exception ex) when (ex.HResult == E_DEVICE_NOT_AVAILABLE)
+            {
+                Debug.WriteLine("Bluetooth radio is not on.");
+                throw;
+            }
+
+            if (device != null)
+            {
+                GattDeviceServicesResult result = await device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+
+                if (result.Status == GattCommunicationStatus.Success)
+                {
+                    services = result.Services;
+                    Debug.WriteLine("Found {0} services", services.Count);
+                    foreach (var service in services)
+                    {
+                        if (service.Uuid == new Guid(UUID_CUSTOM_SERVICE))
+                        {
+                            customService = service;
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("Device unreachable");
+                }
+            }
+        }
+
+        private async Task EnumerateCharacteristics()
+        {
+            RemoveValueChangedHandler();
+
+            try
+            {
+                var accessStatus = await customService.RequestAccessAsync();
+                if (accessStatus == DeviceAccessStatus.Allowed)
+                {
+                    // BT_Code: Get all the child characteristics of a service. Use the cache mode to specify uncached characterstics only 
+                    // and the new Async functions to get the characteristics of unpaired devices as well. 
+                    var result = await customService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    if (result.Status == GattCommunicationStatus.Success)
+                    {
+                        characteristics = result.Characteristics;
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Error accessing service.");
+
+                        // On error, act as if there are no characteristics.
+                        characteristics = new List<GattCharacteristic>();
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("Error accessing service.");
+
+                    // On error, act as if there are no characteristics.
+                    characteristics = new List<GattCharacteristic>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Restricted service. Can't read characteristics: {ex.Message}");
+                // On error, act as if there are no characteristics.
+                characteristics = new List<GattCharacteristic>();
+            }
+
+            foreach (var characteristic in characteristics)
+            {
+                if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify) &&
+                    characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_NOTIFY))
+                {
+                    notifyCharacteristic = characteristic;
+                }
+                else if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Write) &&
+                    characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_WRITE))
+                {
+                    writeCharacteristic = characteristic;
+                }
+            }
+        }
+
+        private async Task SubscribeToNotifications()
+        {
+            if (!subscribedForNotifications)
+            {
+                try
+                {
+                    // BT_Code: Must write the CCCD in order for server to send indications.
+                    // We receive them in the ValueChanged event handler
+                    var status = await notifyCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                        GattClientCharacteristicConfigurationDescriptorValue.Notify);
+
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        AddValueChangedHandler();
+                        Debug.WriteLine("Successfully subscribed for value changes");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Error registering for value changes: {status}");
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
+            }
+            else
+            {
+                try
+                {
+                    var result = await notifyCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                        GattClientCharacteristicConfigurationDescriptorValue.None);
+                    if (result == GattCommunicationStatus.Success)
+                    {
+                        RemoveValueChangedHandler();
+                        Debug.WriteLine("Successfully un-registered for notifications");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Error un-registering for notifications: {result}");
+                    }
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
+            }
+        }
+
+        private void AddValueChangedHandler()
+        {
+            if (!subscribedForNotifications)
+            {
+                notifyCharacteristic.ValueChanged += Characteristic_ValueChanged;
+                subscribedForNotifications = true;
+            }
+        }
+
+        private void RemoveValueChangedHandler()
+        {
+            if (subscribedForNotifications)
+            {
+                notifyCharacteristic.ValueChanged -= Characteristic_ValueChanged;
+                notifyCharacteristic = null;
+                subscribedForNotifications = false;
+            }
         }
 
         private async Task Initialize()
         {
-            device = await BluetoothLEDevice.FromIdAsync(deviceInformation.Id);
+            await GetCustomService();
 
-            var servicesResult = await device.GetGattServicesAsync();
+            await EnumerateCharacteristics();
 
-            if (servicesResult.Status == GattCommunicationStatus.Success)
-            {
-                services = servicesResult.Services;
-                foreach (var service in services)
-                {
-                    if (service.Uuid == new Guid(UUID_CUSTOM_SERVICE))
-                    {
-                        customService = service;
-                    }
-                }
-            }
+            await SubscribeToNotifications();
 
-            if (customService != null)
-            {
-                var characteristicsResult = await customService.GetCharacteristicsAsync();
-
-                if (characteristicsResult.Status == GattCommunicationStatus.Success)
-                {
-                    characteristics = characteristicsResult.Characteristics;
-                    foreach (var characteristic in characteristics)
-                    {
-                        if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify) &&
-                            characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_NOTIFY))
-                        {
-                            notifyCharacteristic = characteristic;
-                        }
-                        else if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Write) &&
-                            characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_WRITE))
-                        {
-                            writeCharacteristic = characteristic;
-                        }
-                    }
-                }
-            }
-
-            if (notifyCharacteristic != null)
-            {
-                var status = await notifyCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-                    GattClientCharacteristicConfigurationDescriptorValue.Notify);
-
-                if (status == GattCommunicationStatus.Success)
-                {
-                    device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
-                    RunCommand(CMD_VR_MODE); // enables high frequency mode
-                    RunCommand(CMD_SENSOR); // enables sending of input data
-                    notifyCharacteristic.ValueChanged += Characteristic_ValueChanged;
-                }
-                else
-                {
-                    // Log error
-                }
-            }
+            device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+            await RunCommand(CMD_VR_MODE); // enables high frequency mode
+            await RunCommand(CMD_SENSOR); // enables sending of input data
         }
 
         // This handler will be called when the controller re-connects
@@ -128,10 +288,6 @@ namespace GearVrController4Windows
             if (sender.ConnectionStatus == BluetoothConnectionStatus.Connected)
             {
                 await Initialize();
-            }
-            else if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
-            {
-                notifyCharacteristic.ValueChanged -= Characteristic_ValueChanged;
             }
         }
 
@@ -150,20 +306,36 @@ namespace GearVrController4Windows
             }
         }
 
-        private async void RunCommand(short commandValue)
+        private async Task<bool> RunCommand(short commandValue)
         {
             var writer = new DataWriter();
             writer.WriteInt16(commandValue);
 
-            var writeResult = await writeCharacteristic.WriteValueAsync(writer.DetachBuffer());
+            try
+            {
+                var writeResult = await writeCharacteristic.WriteValueWithResultAsync(writer.DetachBuffer());
+                if (writeResult.Status == GattCommunicationStatus.Success)
+                {
+                    Debug.WriteLine($"Successfully wrote value {commandValue.ToString()} to device");
+                    return true;
+                }
+                else
+                {
+                    Debug.WriteLine($"Write failed: {writeResult.Status}");
+                    return false;
+                }
 
-            if (writeResult == GattCommunicationStatus.Success)
-            {
-                // do something
             }
-            else
+            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_INVALID_PDU)
             {
-                //log error
+                Debug.WriteLine(ex.Message);
+                return false;
+            }
+            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED || ex.HResult == E_ACCESSDENIED)
+            {
+                // This usually happens when a device reports that it support writing, but it actually doesn't.
+                Debug.WriteLine(ex.Message);
+                return false;
             }
         }
     }

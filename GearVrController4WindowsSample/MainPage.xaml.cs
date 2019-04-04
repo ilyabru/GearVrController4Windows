@@ -9,6 +9,7 @@ using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -35,6 +36,10 @@ namespace GearVrController4WindowsSample
         public MainPage()
         {
             this.InitializeComponent();
+
+            ApplicationView.PreferredLaunchViewSize = new Size(100, 110);
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
+
             ViewModel = new MainPageViewModel();
         }
 
@@ -61,6 +66,11 @@ namespace GearVrController4WindowsSample
                 ViewModel.GearVrController = new GearVrController();
                 await ViewModel.GearVrController.Create(di);
             }
+        }
+
+        private async void DisconnectButton_Click(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.GearVrController.ClearBluetoothLEDeviceAsync();
         }
     }
 }

@@ -14,6 +14,11 @@
                 Click="PickDeviceButton_Click">
             Pick Single Device
         </Button>
+        <Button x:Name="disconnectButton"
+                Margin="0,0,5,10"
+                Click="DisconnectButton_Click">
+            Disconnect
+        </Button>
         <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadButton, Mode=OneWay}" />
     </StackPanel>
 </Page>
