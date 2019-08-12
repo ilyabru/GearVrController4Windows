@@ -1,22 +1,13 @@
 ﻿using GearVrController4Windows;
 using GearVrController4WindowsSample.ViewModels;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Enumeration;
 using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -29,7 +20,7 @@ namespace GearVrController4WindowsSample
     {
         private DevicePicker devicePicker = null;
 
-        public GearVrController GearVrController { get; set; }
+        //public GearVrController GearVrController { get; set; }
 
         public MainPageViewModel ViewModel { get; set; }
 
@@ -52,6 +43,7 @@ namespace GearVrController4WindowsSample
         {
             devicePicker = new DevicePicker();
 
+            // only show Bluetooth Low Energy devices
             devicePicker.Filter.SupportedDeviceSelectors.Add(BluetoothLEDevice.GetDeviceSelectorFromPairingState(true));
             devicePicker.Filter.SupportedDeviceSelectors.Add(BluetoothLEDevice.GetDeviceSelectorFromPairingState(false));
 
