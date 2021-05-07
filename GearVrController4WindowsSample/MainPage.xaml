@@ -8,17 +8,41 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <StackPanel Orientation="Vertical">
+    <StackPanel Orientation="Vertical" Margin="10">
         <Button x:Name="pickDeviceButton"
-                Margin="0,0,5,10"
+                Margin="0,5,5,10"
                 Click="PickDeviceButton_Click">
             Pick Single Device
         </Button>
         <Button x:Name="disconnectButton"
-                Margin="0,0,5,10"
-                Click="DisconnectButton_Click">
+                Margin="0,5,5,10"
+                Click="DisconnectButton_Click"
+                >
             Disconnect
         </Button>
-        <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadButton, Mode=OneWay}" />
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Touchpad Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Back Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.BackButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Home Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.HomeButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Volume Up Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.VolumeUpButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Volume Down Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.VolumeDownButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Trigger Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.TriggerButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
     </StackPanel>
 </Page>

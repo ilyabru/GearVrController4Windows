@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Core;
 using Windows.Devices.Bluetooth;
@@ -51,6 +49,10 @@ namespace GearVrController4Windows
         private byte[] eventData = new byte[60];
         private bool touchpadButton;
         private bool backButton;
+        private bool homeButton;
+        private bool volumeUpButton;
+        private bool volumeDownButton;
+        private bool triggerButton;
 
         public GearVrController() { }
 
@@ -64,6 +66,30 @@ namespace GearVrController4Windows
         {
             get => backButton;
             set => SetPropertyValue(ref backButton, value);
+        }
+
+        public bool HomeButton
+        {
+            get => homeButton;
+            set => SetPropertyValue(ref homeButton, value);
+        }
+
+        public bool VolumeUpButton
+        {
+            get => volumeUpButton;
+            set => SetPropertyValue(ref volumeUpButton, value);
+        }
+
+        public bool VolumeDownButton
+        {
+            get => volumeDownButton;
+            set => SetPropertyValue(ref volumeDownButton, value);
+        }
+
+        public bool TriggerButton
+        {
+            get => triggerButton;
+            set => SetPropertyValue(ref triggerButton, value);
         }
 
         public async Task Create(DeviceInformation deviceInformation)
@@ -302,6 +328,10 @@ namespace GearVrController4Windows
                 {
                     TouchpadButton = (eventData[58] & (1 << 3)) != 0;
                     BackButton = (eventData[58] & (1 << 2)) != 0;
+                    HomeButton = (eventData[58] & (1 << 1)) != 0;
+                    VolumeUpButton = (eventData[58] & (1 << 4)) != 0;
+                    VolumeDownButton = (eventData[58] & (1 << 5)) != 0;
+                    TriggerButton = (eventData[58] & (1 << 0)) != 0;
                 });
             }
         }
