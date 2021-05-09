@@ -1,0 +1,62 @@
+# Universal Windows Platform
+# Build a Universal Windows Platform project using Visual Studio.
+# Add steps that test and distribute an app, save build artifacts, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'x86|x64|ARM'
+  buildConfiguration: 'Release'
+  appxPackageDir: '$(build.artifactStagingDirectory)\AppxPackages\\'
+
+steps:
+- task: NuGetToolInstaller@1
+  inputs:
+    versionSpec: '5.9.1'
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: 'GearVrController4Windows\GearVrController4Windows.csproj'
+    feedsToUse: 'select'
+
+- task: VSBuild@1
+  inputs:
+    solution: 'GearVrController4Windows\GearVrController4Windows.csproj'
+    vsVersion: '16.0'
+    msbuildArgs: '/p:AppxBundlePlatforms="$(buildPlatform)" /p:AppxPackageDir="$(appxPackageDir)" /p:AppxBundle=Always /p:UapAppxPackageBuildMode=StoreUpload'
+    platform: 'x86'
+    configuration: 'Release'
+    clean: true
+    msbuildArchitecture: 'x64'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'GearVrController4Windows'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'pack'
+    packagesToPack: 'GearVrController4Windows\GearVrController4Windows.csproj'
+    versioningScheme: 'byPrereleaseNumber'
+    majorVersion: '0'
+    minorVersion: '0'
+    patchVersion: '1'
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'package'
+    publishLocation: 'Container'
+- task: NuGetCommand@2
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/*.nupkg'
+    nuGetFeedType: 'external'
