@@ -47,14 +47,15 @@ namespace GearVrController4Windows
         private DeviceInformation deviceInformation;
 
         private byte[] eventData = new byte[60];
+
+
+        #region Properties
         private bool touchpadButton;
         private bool backButton;
         private bool homeButton;
         private bool volumeUpButton;
         private bool volumeDownButton;
         private bool triggerButton;
-
-        public GearVrController() { }
 
         public bool TouchpadButton
         {
@@ -91,6 +92,7 @@ namespace GearVrController4Windows
             get => triggerButton;
             set => SetPropertyValue(ref triggerButton, value);
         }
+        #endregion
 
         public async Task Create(DeviceInformation deviceInformation)
         {
