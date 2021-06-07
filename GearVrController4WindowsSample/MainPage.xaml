@@ -25,6 +25,18 @@
             <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Touchpad Axis X: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.AxisX, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Touchpad Axis Y: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.AxisY, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Touchpad Pressed: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadPressed, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
             <TextBlock Text="Back Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
             <TextBlock Text="{x:Bind ViewModel.GearVrController.BackButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
         </StackPanel>
@@ -43,6 +55,42 @@
         <StackPanel Orientation="Horizontal">
             <TextBlock Text="Trigger Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
             <TextBlock Text="{x:Bind ViewModel.GearVrController.TriggerButton, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Accel X: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.AccelX, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Accel Y: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.AccelY, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Accel Z: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.AccelZ, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Gyro X: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.GyroX, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Gyro Y: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.GyroY, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Gyro Z: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.GyroZ, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Mag X: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.MagX, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Mag Y: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.MagY, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Mag Z: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.MagZ, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
         </StackPanel>
     </StackPanel>
 </Page>

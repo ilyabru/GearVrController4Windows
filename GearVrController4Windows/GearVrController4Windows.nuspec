@@ -2,7 +2,7 @@
 <package >
 	<metadata>
 		<id>GearVrController4Windows</id>
-		<version>0.0.1</version>
+		<version>0.0.2</version>
 		<title>GearVrController4Windows</title>
 		<authors>Ilya B.</authors>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -12,10 +12,27 @@
 		<description>This library allows you to use the Gear VR Controller in a UWP application over Bluetooth.</description>
 		<releaseNotes></releaseNotes>
 		<copyright>Copyright © 2021</copyright>
+		<dependencies>
+			<group targetFramework="uap10.0">
+				
+			</group>
+		</dependencies>
 		<tags>uwp windows gear vr gearvr controller csharp c# .net bluetooth bluetoothle ble gatt</tags>
 	</metadata>
 
 	<files>
 		<file src=".\logo\logo.png" target="logo\" />
+		<!-- WinMd and IntelliSense files -->
+		<file src="bin\Release\GearVrController4Windows.dll" target="lib\uap10.0"/>
+		<file src="bin\Release\GearVrController4Windows.XML" target="lib\uap10.0"/>
+
+		<!-- resources -->
+		<file src="bin\ARM\Release\GearVrController4Windows.pri" target="runtimes\win10-arm"/>
+
+		<file src="bin\ARM64\Release\GearVrController4Windows.pri" target="runtimes\win10-arm64"/>
+
+		<file src="bin\x64\Release\GearVrController4Windows.pri" target="runtimes\win10-x64"/>
+
+		<file src="bin\x86\Release\GearVrController4Windows.pri" target="runtimes\win10-x86"/>
 	</files>
 </package>

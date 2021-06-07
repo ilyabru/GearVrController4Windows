@@ -27,6 +27,9 @@ namespace GearVrController4Windows
         private const short CMD_LPM_DISABLE = 0x0700;
         private const short CMD_VR_MODE = 0x0800;
 
+        private const float ACCEL_FACTOR = 0.00001F;
+        private const float GYRO_FACTOR = 0.0001F;
+
         private bool subscribedForNotifications = false;
 
         #region Error Codes
@@ -51,11 +54,24 @@ namespace GearVrController4Windows
 
         #region Properties
         private bool touchpadButton;
-        private bool backButton;
+        private bool triggerButton;
         private bool homeButton;
+        private bool backButton;
         private bool volumeUpButton;
         private bool volumeDownButton;
-        private bool triggerButton;
+        private short axisX;
+        private short axisY;
+        private bool touchpadPressed;
+
+        private float accelX;
+        private float accelY;
+        private float accelZ;
+        private float gyroX;
+        private float gyroY;
+        private float gyroZ;
+        private float magX;
+        private float magY;
+        private float magZ;
 
         public bool TouchpadButton
         {
@@ -63,16 +79,22 @@ namespace GearVrController4Windows
             set => SetPropertyValue(ref touchpadButton, value);
         }
 
-        public bool BackButton
+        public bool TriggerButton
         {
-            get => backButton;
-            set => SetPropertyValue(ref backButton, value);
+            get => triggerButton;
+            set => SetPropertyValue(ref triggerButton, value);
         }
 
         public bool HomeButton
         {
             get => homeButton;
             set => SetPropertyValue(ref homeButton, value);
+        }
+
+        public bool BackButton
+        {
+            get => backButton;
+            set => SetPropertyValue(ref backButton, value);
         }
 
         public bool VolumeUpButton
@@ -87,10 +109,78 @@ namespace GearVrController4Windows
             set => SetPropertyValue(ref volumeDownButton, value);
         }
 
-        public bool TriggerButton
+        // max value is 315
+        public short AxisX
         {
-            get => triggerButton;
-            set => SetPropertyValue(ref triggerButton, value);
+            get => axisX;
+            set => SetPropertyValue(ref axisX, value);
+        }
+
+        // max value is 315
+        public short AxisY
+        {
+            get => axisY;
+            set => SetPropertyValue(ref axisY, value);
+        }
+
+        public bool TouchpadPressed
+        {
+            get => touchpadPressed;
+            private set => SetPropertyValue(ref touchpadPressed, value);
+        }
+
+        public float AccelX
+        {
+            get => accelX;
+            private set => SetPropertyValue(ref accelX, value);
+        }
+
+        public float AccelY
+        {
+            get => accelY;
+            private set => SetPropertyValue(ref accelY, value);
+        }
+
+        public float AccelZ
+        {
+            get => accelZ;
+            private set => SetPropertyValue(ref accelZ, value);
+        }
+
+        public float GyroX
+        {
+            get => gyroX;
+            private set => SetPropertyValue(ref gyroX, value);
+        }
+
+        public float GyroY
+        {
+            get => gyroY;
+            private set => SetPropertyValue(ref gyroY, value);
+        }
+
+        public float GyroZ
+        {
+            get => gyroZ;
+            private set => SetPropertyValue(ref gyroZ, value);
+        }
+
+        public float MagX
+        {
+            get => magX;
+            private set => SetPropertyValue(ref magX, value);
+        }
+
+        public float MagY
+        {
+            get => magY;
+            private set => SetPropertyValue(ref magY, value);
+        }
+
+        public float MagZ
+        {
+            get => magZ;
+            private set => SetPropertyValue(ref magZ, value);
         }
         #endregion
 
@@ -318,6 +408,37 @@ namespace GearVrController4Windows
                 await Initialize();
             }
         }
+        private async Task<bool> RunCommand(short commandValue)
+        {
+            var writer = new DataWriter();
+            writer.WriteInt16(commandValue);
+
+            try
+            {
+                var writeResult = await writeCharacteristic.WriteValueWithResultAsync(writer.DetachBuffer());
+                if (writeResult.Status == GattCommunicationStatus.Success)
+                {
+                    Debug.WriteLine($"Successfully wrote value {commandValue} to device");
+                    return true;
+                }
+                else
+                {
+                    Debug.WriteLine($"Write failed: {writeResult.Status}");
+                    return false;
+                }
+            }
+            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_INVALID_PDU)
+            {
+                Debug.WriteLine(ex.Message);
+                return false;
+            }
+            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED || ex.HResult == E_ACCESSDENIED)
+            {
+                // This usually happens when a device reports that it support writing, but it actually doesn't.
+                Debug.WriteLine(ex.Message);
+                return false;
+            }
+        }
 
         private async void Characteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
@@ -334,41 +455,51 @@ namespace GearVrController4Windows
                     VolumeUpButton = (eventData[58] & (1 << 4)) != 0;
                     VolumeDownButton = (eventData[58] & (1 << 5)) != 0;
                     TriggerButton = (eventData[58] & (1 << 0)) != 0;
+                    AxisX = (short)((((eventData[54] & 0xF) << 6) + ((eventData[55] & 0xFC) >> 2)) & 0x3FF);
+                    AxisY = (short)((((eventData[55] & 0x3) << 8) + ((eventData[56] & 0xFF) >> 0)) & 0x3FF);
+                    TouchpadPressed = AxisX != 0 && AxisY != 0;
+
+                    AccelX = GetAccelerometerData(eventData, 0, 4);
+                    AccelY = GetAccelerometerData(eventData, 0, 6);
+                    AccelZ = GetAccelerometerData(eventData, 0, 8);
+                    GyroX = GetGyroscopeData(eventData, 0, 10);
+                    GyroY = GetGyroscopeData(eventData, 0, 12);
+                    GyroZ = GetGyroscopeData(eventData, 0, 14);
+                    MagX = GetMagnetometerData(eventData, 0);
+                    MagY = GetMagnetometerData(eventData, 2);
+                    MagZ = GetMagnetometerData(eventData, 4);
                 });
             }
         }
 
-        private async Task<bool> RunCommand(short commandValue)
+        private float GetAccelerometerData(byte[] eventData, int index, int offset)
         {
-            var writer = new DataWriter();
-            writer.WriteInt16(commandValue);
+            byte[] acceldata = new byte[] { eventData[16 * index + offset], eventData[16 * index + offset + 1] };
+            short[] arrayOfShort = new short[acceldata.Length / 2];
 
-            try
-            {
-                var writeResult = await writeCharacteristic.WriteValueWithResultAsync(writer.DetachBuffer());
-                if (writeResult.Status == GattCommunicationStatus.Success)
-                {
-                    Debug.WriteLine($"Successfully wrote value {commandValue.ToString()} to device");
-                    return true;
-                }
-                else
-                {
-                    Debug.WriteLine($"Write failed: {writeResult.Status}");
-                    return false;
-                }
+            System.Buffer.BlockCopy(acceldata, 0, arrayOfShort, 0, acceldata.Length);
 
-            }
-            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_INVALID_PDU)
-            {
-                Debug.WriteLine(ex.Message);
-                return false;
-            }
-            catch (Exception ex) when (ex.HResult == E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED || ex.HResult == E_ACCESSDENIED)
-            {
-                // This usually happens when a device reports that it support writing, but it actually doesn't.
-                Debug.WriteLine(ex.Message);
-                return false;
-            }
+            return arrayOfShort[0] * 10000.0F * 9.80665F / 2048.0F * ACCEL_FACTOR;
+        }
+
+        private float GetGyroscopeData(byte[] eventData, int index, int offset)
+        {
+            byte[] acceldata = new byte[] { eventData[16 * index + offset], eventData[16 * index + offset + 1] };
+            short[] arrayOfShort = new short[acceldata.Length / 2];
+
+            System.Buffer.BlockCopy(acceldata, 0, arrayOfShort, 0, acceldata.Length);
+
+            return arrayOfShort[0] * 10000.0F * 0.017453292F / 14.285F * GYRO_FACTOR;
+        }
+
+        private float GetMagnetometerData(byte[] eventData, int offset)
+        {
+            byte[] acceldata = new byte[] { eventData[32 + offset], eventData[32 + offset + 1] };
+            short[] arrayOfShort = new short[acceldata.Length / 2];
+
+            System.Buffer.BlockCopy(acceldata, 0, arrayOfShort, 0, acceldata.Length);
+
+            return arrayOfShort[0] * 0.06F;
         }
     }
 }

@@ -28,7 +28,7 @@ namespace GearVrController4WindowsSample
         {
             this.InitializeComponent();
 
-            ApplicationView.PreferredLaunchViewSize = new Size(100, 110);
+            ApplicationView.PreferredLaunchViewSize = new Size(500, 800);
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.PreferredLaunchViewSize;
 
             ViewModel = new MainPageViewModel();

@@ -2,7 +2,7 @@
 
 [![latest version](https://img.shields.io/nuget/v/GearVrController4Windows)](https://www.nuget.org/packages/GearVrController4Windows) [![downloads](https://img.shields.io/nuget/dt/GearVrController4Windows)](https://www.nuget.org/packages/GearVrController4Windows)
 
-This library allow you to use a Gear VR controller in a UWP app over Bluetooth!
+This library allows you to use a Gear VR controller in a UWP app over Bluetooth!
 
 ![Gear VR Controller](https://raw.githubusercontent.com/ilyabru/GearVrController4Windows/master/Docs/GVRCimage.jpg)
 
@@ -25,8 +25,8 @@ Install-Package GearVrController4Windows
     ```
 
 2.
-    Using the `Windows.Devices.Enumeration` APIs, pair the Gear VR controller and retreive the `DeviceInformation` object.
-    One way to do this is by using the `DevicePicker` class. This code snippet from the GearVrController4WindowsSample project demonstrates how to display the DevicePicker on the form and retrieve the DeviceInformation from the picker:
+    Using the `Windows.Devices.Enumeration` APIs, pair the Gear VR controller and retrieve the `DeviceInformation` object.
+    One way to do this is by using the `DevicePicker` class. This code snippet from the GearVrController4WindowsSample project demonstrates how to display the DevicePicker on the form and get the DeviceInformation object:
 
     ```csharp
     devicePicker = new DevicePicker();
@@ -97,5 +97,10 @@ Please see the sample project for a complete implementation.
 
 ## Notes
 
-* Only the buttons have been implemented so far. Gyroscope and touchpad have not been implemented.
-* Only works with UWP apps running on Windows 10 1803 or above due to the bluetooth APIs used.
+* Motion readings (Accel, Gyro, Mag) are not fully correct. Official implementation uses multiple readings for each coordinate (X, Y, or Z) and consolidates them?
+* No fusion drift algorithm applied, having one would make the readings more useful to developers.
+* Magnetometer calibration not implemented.
+* Only works with UWP apps running on Windows 10 1803 or above due to the Bluetooth APIs used.
+
+## Credits
+* Jim Yang for his research on reverse engineering the controller: https://jsyang.ca/hacks/gear-vr-rev-eng/
