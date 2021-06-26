@@ -51,7 +51,7 @@ Install-Package GearVrController4Windows
     Pass the `DeviceInformation` variable into the `gearVrController.Create` method (do this in an async method):
 
     ```csharp
-    await gearVrController.Create(di);
+    await gearVrController.ConnectAsync(di);
     ```
 
 ### Reading Inputs
@@ -80,15 +80,17 @@ public sealed partial class MainPage : Page
 
     private void Gvc_PropertyChanged(object sender, PropertyChangedEventArgs e)
     {
-        if (GearVrController.TouchpadButton)
-        {
-            // do something here if touchpad button is pressed
-        }
-
-        if (GearVrController.BackButton)
-        {
-            // do something else if back button is pressed
-        }
+        case nameof(GearVrController.TouchpadButton):
+            if (ViewModel.GearVrController.TouchpadTapped == true)
+            {
+                Debug.WriteLine("Touchpad pressed and is true!");
+            }
+            break;
+        case nameof(GearVrController.HomeButton):
+            Debug.WriteLine("Pressed home button.");
+            break;
+        default:
+            break;
     }   
 }
 ```
@@ -103,4 +105,5 @@ Please see the sample project for a complete implementation.
 * Only works with UWP apps running on Windows 10 1803 or above due to the Bluetooth APIs used.
 
 ## Credits
-* Jim Yang for his research on reverse engineering the controller: https://jsyang.ca/hacks/gear-vr-rev-eng/
+
+* Jim Yang for his research on reverse engineering the controller: [https://jsyang.ca/hacks/gear-vr-rev-eng](https://jsyang.ca/hacks/gear-vr-rev-eng/)

@@ -2,7 +2,7 @@
 <package >
 	<metadata>
 		<id>GearVrController4Windows</id>
-		<version>0.0.2</version>
+		<version>0.1.0</version>
 		<title>GearVrController4Windows</title>
 		<authors>Ilya B.</authors>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>

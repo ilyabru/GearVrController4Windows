@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Core;
 using Windows.Devices.Bluetooth;
@@ -11,6 +12,9 @@ using Windows.UI.Core;
 
 namespace GearVrController4Windows
 {
+    /// <summary>
+    /// Represents the Gear VR Controller
+    /// </summary>
     public class GearVrController : ObservableObject
     {
         private const string UUID_CUSTOM_SERVICE = "4f63756c-7573-2054-6872-65656d6f7465";
@@ -39,18 +43,16 @@ namespace GearVrController4Windows
         readonly int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df); // HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_AVAILABLE)
         #endregion
 
-        public BluetoothLEDevice device = null;
+        private BluetoothLEDevice device = null;
 
         private IReadOnlyList<GattDeviceService> services;
         private GattDeviceService customService = null;
-        private IReadOnlyList<GattCharacteristic> characteristics;
         private GattCharacteristic notifyCharacteristic = null;
         private GattCharacteristic writeCharacteristic = null;
 
         private DeviceInformation deviceInformation;
 
         private byte[] eventData = new byte[60];
-
 
         #region Properties
         private bool touchpadButton;
@@ -61,7 +63,7 @@ namespace GearVrController4Windows
         private bool volumeDownButton;
         private short axisX;
         private short axisY;
-        private bool touchpadPressed;
+        private bool touchpadTapped;
 
         private float accelX;
         private float accelY;
@@ -73,110 +75,162 @@ namespace GearVrController4Windows
         private float magY;
         private float magZ;
 
+        /// <summary>
+        /// Represents the large touchpad button.
+        /// </summary>
         public bool TouchpadButton
         {
             get => touchpadButton;
             set => SetPropertyValue(ref touchpadButton, value);
         }
 
+        /// <summary>
+        /// Represent the trigger button.
+        /// </summary>
         public bool TriggerButton
         {
             get => triggerButton;
             set => SetPropertyValue(ref triggerButton, value);
         }
 
+        /// <summary>
+        /// Represent the home button on the right side.
+        /// </summary>
         public bool HomeButton
         {
             get => homeButton;
             set => SetPropertyValue(ref homeButton, value);
         }
 
+        /// <summary>
+        /// Represent the back button on the left side.
+        /// </summary>
         public bool BackButton
         {
             get => backButton;
             set => SetPropertyValue(ref backButton, value);
         }
 
+        /// <summary>
+        /// Represent the volume up button.
+        /// </summary>
         public bool VolumeUpButton
         {
             get => volumeUpButton;
             set => SetPropertyValue(ref volumeUpButton, value);
         }
 
+        /// <summary>
+        /// Represent the volume down button.
+        /// </summary>
         public bool VolumeDownButton
         {
             get => volumeDownButton;
             set => SetPropertyValue(ref volumeDownButton, value);
         }
 
-        // max value is 315
+        /// <summary>
+        /// Represent the x-axis touchpad value. Min = 0, Max = 315
+        /// </summary>
         public short AxisX
         {
             get => axisX;
             set => SetPropertyValue(ref axisX, value);
         }
 
-        // max value is 315
+        /// <summary>
+        /// Represent the y-axis touchpad value. Min = 0, Max = 315
+        /// </summary>
         public short AxisY
         {
             get => axisY;
             set => SetPropertyValue(ref axisY, value);
         }
 
-        public bool TouchpadPressed
+        /// <summary>
+        /// This is activated when touchpad is tapped.
+        /// </summary>
+        public bool TouchpadTapped
         {
-            get => touchpadPressed;
-            private set => SetPropertyValue(ref touchpadPressed, value);
+            get => touchpadTapped;
+            private set => SetPropertyValue(ref touchpadTapped, value);
         }
 
+        /// <summary>
+        /// Represents Accelerometer X value
+        /// </summary>
         public float AccelX
         {
             get => accelX;
             private set => SetPropertyValue(ref accelX, value);
         }
 
+        /// <summary>
+        /// Represents Accelerometer Y value
+        /// </summary>
         public float AccelY
         {
             get => accelY;
             private set => SetPropertyValue(ref accelY, value);
         }
 
+        /// <summary>
+        /// Represents Accelerometer Z value
+        /// </summary>
         public float AccelZ
         {
             get => accelZ;
             private set => SetPropertyValue(ref accelZ, value);
         }
 
+        /// <summary>
+        /// Represents Gyroscope X value
+        /// </summary>
         public float GyroX
         {
             get => gyroX;
             private set => SetPropertyValue(ref gyroX, value);
         }
 
+        /// <summary>
+        /// Represents Gyroscope Y value
+        /// </summary>
         public float GyroY
         {
             get => gyroY;
             private set => SetPropertyValue(ref gyroY, value);
         }
 
+        /// <summary>
+        /// Represents Gyroscope Z value
+        /// </summary>
         public float GyroZ
         {
             get => gyroZ;
             private set => SetPropertyValue(ref gyroZ, value);
         }
 
+        /// <summary>
+        /// Represents Magnetometer X value
+        /// </summary>
         public float MagX
         {
             get => magX;
             private set => SetPropertyValue(ref magX, value);
         }
 
+        /// <summary>
+        /// Represents Magnetometer Y value
+        /// </summary>
         public float MagY
         {
             get => magY;
             private set => SetPropertyValue(ref magY, value);
         }
 
+        /// <summary>
+        /// Represents Magnetometer Z value
+        /// </summary>
         public float MagZ
         {
             get => magZ;
@@ -184,13 +238,34 @@ namespace GearVrController4Windows
         }
         #endregion
 
-        public async Task Create(DeviceInformation deviceInformation)
+        /// <summary>
+        /// Connect to Gear VR Controller and start listening for notifications
+        /// </summary>
+        /// <param name="deviceInformation">DeviceInformation obtained from DeviceWatcher or similar</param>
+        /// <returns></returns>
+        public async Task ConnectAsync(DeviceInformation deviceInformation)
         {
             this.deviceInformation = deviceInformation;
 
-            await Initialize();
+            await GetBLEDevice();
+
+            device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+
+            await GetCustomService();
+
+            await EnumerateCharacteristics();
+
+            await SubscribeToNotifications();
+
+            await RunCommand(CMD_VR_MODE); // enables high frequency mode
+            await RunCommand(CMD_SENSOR); // enables sending of input data
+
         }
 
+        /// <summary>
+        /// Disable notifications and clear BLE device
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> ClearBluetoothLEDeviceAsync()
         {
             if (subscribedForNotifications)
@@ -203,8 +278,6 @@ namespace GearVrController4Windows
                 }
                 else
                 {
-                    //notifyCharacteristic.ValueChanged -= Characteristic_ValueChanged;
-                    //subscribedForNotifications = false;
                     RemoveValueChangedHandler();
                 }
             }
@@ -218,7 +291,7 @@ namespace GearVrController4Windows
             return true;
         }
 
-        private async Task GetCustomService()
+        private async Task GetBLEDevice()
         {
             if (!await ClearBluetoothLEDeviceAsync())
             {
@@ -241,7 +314,10 @@ namespace GearVrController4Windows
                 Debug.WriteLine("Bluetooth radio is not on.");
                 throw;
             }
+        }
 
+        private async Task GetCustomService()
+        {
             if (device != null)
             {
                 GattDeviceServicesResult result = await device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
@@ -250,13 +326,8 @@ namespace GearVrController4Windows
                 {
                     services = result.Services;
                     Debug.WriteLine("Found {0} services", services.Count);
-                    foreach (var service in services)
-                    {
-                        if (service.Uuid == new Guid(UUID_CUSTOM_SERVICE))
-                        {
-                            customService = service;
-                        }
-                    }
+
+                    customService = services.FirstOrDefault(s => s.Uuid == new Guid(UUID_CUSTOM_SERVICE));
                 }
                 else
                 {
@@ -265,12 +336,15 @@ namespace GearVrController4Windows
             }
         }
 
+
         private async Task EnumerateCharacteristics()
         {
             RemoveValueChangedHandler();
 
+            IReadOnlyList<GattCharacteristic> characteristics = null;
             try
             {
+                // Ensure we have access to the device.
                 var accessStatus = await customService.RequestAccessAsync();
                 if (accessStatus == DeviceAccessStatus.Allowed)
                 {
@@ -304,19 +378,13 @@ namespace GearVrController4Windows
                 characteristics = new List<GattCharacteristic>();
             }
 
-            foreach (var characteristic in characteristics)
-            {
-                if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify) &&
-                    characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_NOTIFY))
-                {
-                    notifyCharacteristic = characteristic;
-                }
-                else if (characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Write) &&
-                    characteristic.Uuid == new Guid(UUID_CUSTOM_SERVICE_WRITE))
-                {
-                    writeCharacteristic = characteristic;
-                }
-            }
+            notifyCharacteristic = characteristics
+                .FirstOrDefault(c => c.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify)
+                    && c.Uuid == new Guid(UUID_CUSTOM_SERVICE_NOTIFY));
+
+            writeCharacteristic = characteristics
+                .FirstOrDefault(c => c.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Write)
+                    && c.Uuid == new Guid(UUID_CUSTOM_SERVICE_WRITE));
         }
 
         private async Task SubscribeToNotifications()
@@ -387,27 +455,26 @@ namespace GearVrController4Windows
             }
         }
 
-        private async Task Initialize()
-        {
-            await GetCustomService();
-
-            await EnumerateCharacteristics();
-
-            await SubscribeToNotifications();
-
-            device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
-            await RunCommand(CMD_VR_MODE); // enables high frequency mode
-            await RunCommand(CMD_SENSOR); // enables sending of input data
-        }
-
         // This handler will be called when the controller re-connects
         private async void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
         {
             if (sender.ConnectionStatus == BluetoothConnectionStatus.Connected)
             {
-                await Initialize();
+                Debug.WriteLine("Device has reconnected.");
+
+                if (writeCharacteristic != null)
+                {
+                    // running these commands will re enable sending of data on a reconnect
+                    await RunCommand(CMD_VR_MODE); // enables high frequency mode
+                    await RunCommand(CMD_SENSOR); // enables sending of input data
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Device was disconnected.");
             }
         }
+
         private async Task<bool> RunCommand(short commandValue)
         {
             var writer = new DataWriter();
@@ -457,7 +524,7 @@ namespace GearVrController4Windows
                     TriggerButton = (eventData[58] & (1 << 0)) != 0;
                     AxisX = (short)((((eventData[54] & 0xF) << 6) + ((eventData[55] & 0xFC) >> 2)) & 0x3FF);
                     AxisY = (short)((((eventData[55] & 0x3) << 8) + ((eventData[56] & 0xFF) >> 0)) & 0x3FF);
-                    TouchpadPressed = AxisX != 0 && AxisY != 0;
+                    TouchpadTapped = AxisX != 0 && AxisY != 0;
 
                     AccelX = GetAccelerometerData(eventData, 0, 4);
                     AccelY = GetAccelerometerData(eventData, 0, 6);

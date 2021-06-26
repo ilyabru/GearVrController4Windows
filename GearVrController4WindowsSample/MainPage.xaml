@@ -9,15 +9,18 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <StackPanel Orientation="Vertical" Margin="10">
+        <TextBlock TextWrapping="Wrap" Margin="0,10,0,0">
+                Selected device: <Run x:Name="SelectedDeviceRun" FontWeight="Bold"/>
+        </TextBlock>
         <Button x:Name="pickDeviceButton"
                 Margin="0,5,5,10"
                 Click="PickDeviceButton_Click">
-            Pick Single Device
+            Connect to Device
         </Button>
         <Button x:Name="disconnectButton"
                 Margin="0,5,5,10"
                 Click="DisconnectButton_Click"
-                >
+                IsEnabled="False">
             Disconnect
         </Button>
         <StackPanel Orientation="Horizontal">
@@ -33,8 +36,8 @@
             <TextBlock Text="{x:Bind ViewModel.GearVrController.AxisY, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal">
-            <TextBlock Text="Touchpad Pressed: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
-            <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadPressed, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
+            <TextBlock Text="Touchpad Tapped: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
+            <TextBlock Text="{x:Bind ViewModel.GearVrController.TouchpadTapped, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" Margin="5,0,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal">
             <TextBlock Text="Back Button: " Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" />
